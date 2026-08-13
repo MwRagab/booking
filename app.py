@@ -124,7 +124,7 @@ with st.sidebar:
     st.markdown("### ⚙️ إدارة السنتر")
     admin_password = st.text_input("كلمة المرور", type="password")
     
-    if admin_password == "1234":
+    if admin_password == "12311231@Mm":
         bookings_df = load_bookings()
         st.success("تسجيل الدخول ناجح")
         st.metric(label="إجمالي الحجوزات حتى الآن", value=len(bookings_df))
