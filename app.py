@@ -13,7 +13,7 @@ st.set_page_config(page_title="سنتر الأوائل - حجز المواعيد
 
 # 2. إنشاء الاتصالات بقواعد البيانات (جوجل شيت و PostgreSQL)
 gsheets_conn = st.connection("gsheets", type=GSheetsConnection)
-db_conn = st.connection("postgresql", type="sql")
+db_conn = st.connection("postgresql", type="sql", autocommit=True)
 
 def get_base64_image(image_path):
     if os.path.exists(image_path):
