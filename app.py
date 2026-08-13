@@ -118,6 +118,10 @@ def save_booking(new_data):
 def convert_df_to_excel_sheets(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # الشيت المجمع اللي هيفتح أول حاجة وفيه كل التفاصيل بالأسماء
+        df.to_excel(writer, sheet_name='كل الحجوزات التفصيلية', index=False)
+        
+        # تقسيم الكشوفات لكل مدرس في تبويبات تحت
         grouped = df.groupby(['المدرس', 'الميعاد'])
         for (teacher, slot), group_df in grouped:
             clean_sheet_name = f"{teacher} - {slot[:15]}".replace(":", "-").replace("/", "-")
