@@ -89,10 +89,14 @@ def load_main_data():
     return df
 
 def load_bookings():
-    df = conn.read(worksheet="Bookings")
+    # إضافة ttl=0 لإجبار الموقع على قراءة الداتا المباشرة من الشيت وتجاهل الكاش
+    df = conn.read(worksheet="Bookings", ttl=0)
     if df.empty or len(df.columns) == 0:
         return pd.DataFrame(columns=["كود الطالب", "رقم التليفون", "اسم الطالب", "المادة", "المدرس", "الميعاد"])
+    
+    # تنظيف البيانات عشان التطابق يكون دقيق 100%
     df['كود الطالب'] = df['كود الطالب'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+    df['المدرس'] = df['المدرس'].astype(str).str.strip()
     return df
 
 def save_booking(new_data):
