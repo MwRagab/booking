@@ -6,12 +6,14 @@ import urllib.parse
 import base64
 from io import BytesIO
 from streamlit_gsheets import GSheetsConnection
+from sqlalchemy import text
 
-# 1. إعدادات الصفحة والتصميم
+# 1. إعدادات الصفحة
 st.set_page_config(page_title="سنتر الأوائل - حجز المواعيد", page_icon="📚", layout="centered")
 
-# الاتصال بقاعدة بيانات جوجل شيت
-conn = st.connection("gsheets", type=GSheetsConnection)
+# 2. إنشاء الاتصالات بقواعد البيانات (جوجل شيت و PostgreSQL)
+gsheets_conn = st.connection("gsheets", type=GSheetsConnection)
+db_conn = st.connection("postgresql", type="sql")
 
 def get_base64_image(image_path):
     if os.path.exists(image_path):
@@ -79,36 +81,43 @@ ALL_COURSES = {
     "MATH": "محمد علي (الأربعاء 5م)"
 }
 
-# 3. دوال التعامل مع جوجل شيت
-@st.cache_data(ttl=60) # تحديث الداتا كل 60 ثانية لتسريع الموقع
+# 3. دوال البيانات المُعدلة
+@st.cache_data(ttl=60)
 def load_main_data():
-    df = conn.read(worksheet="MainData")
+    df = gsheets_conn.read(worksheet="MainData")
     if not df.empty:
         df['كود الطالب'] = df['كود الطالب'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
         df['رقم التليفون'] = df['رقم التليفون'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
     return df
 
 def load_bookings():
-    # رجعنا الذاكرة المؤقتة (ttl=60) عشان نحمي السيرفر من الحظر بتاع جوجل
-    df = conn.read(worksheet="Bookings", ttl=60)
-    if df.empty or len(df.columns) == 0:
+    try:
+        # قراءة الحجوزات لايف من قاعدة بيانات البوستجريس بدون كاش
+        df = db_conn.query("SELECT * FROM bookings", ttl=0)
+        df['كود الطالب'] = df['كود الطالب'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+        df['المدرس'] = df['المدرس'].astype(str).str.strip()
+        return df
+    except Exception as e:
         return pd.DataFrame(columns=["كود الطالب", "رقم التليفون", "اسم الطالب", "المادة", "المدرس", "الميعاد"])
-    df['كود الطالب'] = df['كود الطالب'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-    return df
 
 def save_booking(new_data):
-    df = load_bookings()
-    new_df = pd.DataFrame([new_data])
-    updated_df = pd.concat([df, new_df], ignore_index=True)
-    conn.update(worksheet="Bookings", data=updated_df)
-    
-    # السطر السحري: ده بيمسح الذاكرة المؤقتة "بعد الحجز فقط" عشان يجبر الموقع يسحب الداتا لايف ويأكد للطالب
+    # إدخال البيانات بسرعة وأمان لمنع التداخل بين الطلبة
+    query = text('INSERT INTO bookings ("كود الطالب", "رقم التليفون", "اسم الطالب", "المادة", "المدرس", "الميعاد") VALUES (:code, :phone, :name, :subject, :teacher, :slot)')
+    with db_conn.session as s:
+        s.execute(query, {
+            "code": new_data["كود الطالب"],
+            "phone": new_data["رقم التليفون"],
+            "name": new_data["اسم الطالب"],
+            "subject": new_data["المادة"],
+            "teacher": new_data["المدرس"],
+            "slot": new_data["الميعاد"]
+        })
+        s.commit()
     st.cache_data.clear()
 
 def convert_df_to_excel_sheets(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, sheet_name='كل الحجوزات', index=False)
         grouped = df.groupby(['المدرس', 'الميعاد'])
         for (teacher, slot), group_df in grouped:
             clean_sheet_name = f"{teacher} - {slot[:15]}".replace(":", "-").replace("/", "-")
@@ -128,7 +137,7 @@ with st.sidebar:
     st.markdown("### ⚙️ إدارة السنتر")
     admin_password = st.text_input("كلمة المرور", type="password")
     
-    if admin_password == "12311231@Mm":
+    if admin_password == "1234":
         bookings_df = load_bookings()
         st.success("تسجيل الدخول ناجح")
         st.metric(label="إجمالي الحجوزات حتى الآن", value=len(bookings_df))
@@ -175,7 +184,7 @@ if not st.session_state.logged_in:
     st.markdown("##### برجاء إدخال بياناتك لعرض المواد واختيار المواعيد:")
     with st.form("login_form"):
         student_code = st.text_input("كود الطالب (بدون مسافات)").strip()
-        phone_number = st.text_input("رقم التليفون").strip()
+        phone_number = st.text_input("رقم تليفون ولي الأمر").strip()
         submit_btn = st.form_submit_button("دخول 🚀")
         
         if submit_btn:
