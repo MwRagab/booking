@@ -2,3 +2,5 @@ streamlit
 st-gsheets-connection
 pandas
 openpyxl
+SQLAlchemy
+psycopg2-binary
