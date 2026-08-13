@@ -89,14 +89,11 @@ def load_main_data():
     return df
 
 def load_bookings():
-    # إضافة ttl=0 لإجبار الموقع على قراءة الداتا المباشرة من الشيت وتجاهل الكاش
-    df = conn.read(worksheet="Bookings", ttl=0)
+    # رجعنا الذاكرة المؤقتة (ttl=60) عشان نحمي السيرفر من الحظر بتاع جوجل
+    df = conn.read(worksheet="Bookings", ttl=60)
     if df.empty or len(df.columns) == 0:
         return pd.DataFrame(columns=["كود الطالب", "رقم التليفون", "اسم الطالب", "المادة", "المدرس", "الميعاد"])
-    
-    # تنظيف البيانات عشان التطابق يكون دقيق 100%
     df['كود الطالب'] = df['كود الطالب'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-    df['المدرس'] = df['المدرس'].astype(str).str.strip()
     return df
 
 def save_booking(new_data):
@@ -104,6 +101,9 @@ def save_booking(new_data):
     new_df = pd.DataFrame([new_data])
     updated_df = pd.concat([df, new_df], ignore_index=True)
     conn.update(worksheet="Bookings", data=updated_df)
+    
+    # السطر السحري: ده بيمسح الذاكرة المؤقتة "بعد الحجز فقط" عشان يجبر الموقع يسحب الداتا لايف ويأكد للطالب
+    st.cache_data.clear()
 
 def convert_df_to_excel_sheets(df):
     output = BytesIO()
