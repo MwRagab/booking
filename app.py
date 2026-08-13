@@ -141,7 +141,7 @@ with st.sidebar:
     st.markdown("### ⚙️ إدارة السنتر")
     admin_password = st.text_input("كلمة المرور", type="password")
     
-    if admin_password == "1234":
+    if admin_password == "12311231@Mm":
         bookings_df = load_bookings()
         st.success("تسجيل الدخول ناجح")
         st.metric(label="إجمالي الحجوزات حتى الآن", value=len(bookings_df))
@@ -188,7 +188,7 @@ if not st.session_state.logged_in:
     st.markdown("##### برجاء إدخال بياناتك لعرض المواد واختيار المواعيد:")
     with st.form("login_form"):
         student_code = st.text_input("كود الطالب (بدون مسافات)").strip()
-        phone_number = st.text_input("رقم تليفون ولي الأمر").strip()
+        phone_number = st.text_input("رقم التليفون").strip()
         submit_btn = st.form_submit_button("دخول 🚀")
         
         if submit_btn:
