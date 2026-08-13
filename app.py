@@ -171,12 +171,12 @@ if not st.session_state.logged_in:
     st.markdown("##### برجاء إدخال بياناتك لعرض المواد واختيار المواعيد:")
     with st.form("login_form"):
         student_code = st.text_input("كود الطالب (بدون مسافات)").strip()
-        phone_number = st.text_input("رقم تليفون ولي الأمر").strip()
+        phone_number = st.text_input("رقم التليفون").strip()
         submit_btn = st.form_submit_button("دخول 🚀")
         
         if submit_btn:
             main_df = load_main_data()
-            student_data = main_df[(main_df['كود الطالب'] == student_code) & (main_df['رقم التليفون'] == phone_number)]
+            student_data = main_df[(main_df['كود الطالب'] == student_code) & (main_df['رقم التليفون'].str.lstrip('0') == phone_number.lstrip('0'))]
             
             if student_data.empty:
                 st.error("❌ البيانات غير صحيحة، تأكد من الكود ورقم التليفون.")
